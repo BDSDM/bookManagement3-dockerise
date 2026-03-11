@@ -1,0 +1,32 @@
+/* You can add global styles to this file, and also import other style files */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+/* styles.css */
+.custom-datepicker .mat-datepicker-content {
+  transform: translateX(50px) !important; /* décale de 50px vers la droite */
+}
+/* Désactiver l’œil de Edge/Chrome pour les champs password */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-inner-spin-button,
+input[type="password"]::-webkit-outer-spin-button,
+input[type="password"]::-webkit-clear-button,
+input[type="password"]::-webkit-reveal {
+  display: none;
+}

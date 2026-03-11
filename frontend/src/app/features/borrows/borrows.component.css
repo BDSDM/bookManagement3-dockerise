@@ -1,0 +1,17 @@
+.borrows-container {
+  padding: 20px;
+}
+
+mat-table {
+  width: 100%;
+  margin-top: 20px;
+}
+
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* styles.css ou global.scss */
+::ng-deep .custom-datepicker .mat-datepicker-content {
+  margin-left: 50px !important; /* décale vers la droite */
+}

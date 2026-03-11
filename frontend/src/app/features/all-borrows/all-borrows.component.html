@@ -1,0 +1,55 @@
+<div class="borrows-container">
+  <h2>Tous les Emprunts</h2>
+
+  <mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+    <!-- Nom de l'emprunteur -->
+    <ng-container matColumnDef="borrowerName">
+      <mat-header-cell *matHeaderCellDef> Emprunteur </mat-header-cell>
+      <mat-cell *matCellDef="let borrow"> {{ borrow.borrowerName }} </mat-cell>
+    </ng-container>
+
+    <!-- Date d'emprunt -->
+    <ng-container matColumnDef="borrowDate">
+      <mat-header-cell *matHeaderCellDef> Date d'emprunt </mat-header-cell>
+      <mat-cell *matCellDef="let borrow"> {{ borrow.borrowDate }} </mat-cell>
+    </ng-container>
+
+    <!-- Date de retour -->
+    <ng-container matColumnDef="returnDate">
+      <mat-header-cell *matHeaderCellDef> Date de retour </mat-header-cell>
+      <mat-cell *matCellDef="let borrow">
+        {{ borrow.returnDate || "-" }}
+      </mat-cell>
+    </ng-container>
+
+    <!-- Statut -->
+    <ng-container matColumnDef="status">
+      <mat-header-cell *matHeaderCellDef> Statut </mat-header-cell>
+      <mat-cell *matCellDef="let borrow"> {{ borrow.status }} </mat-cell>
+    </ng-container>
+
+    <!-- Titre du livre -->
+    <ng-container matColumnDef="bookTitle">
+      <mat-header-cell *matHeaderCellDef> Livre </mat-header-cell>
+      <mat-cell *matCellDef="let borrow"> {{ borrow.bookTitle }} </mat-cell>
+    </ng-container>
+
+    <!-- Actions -->
+    <ng-container matColumnDef="actions">
+      <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
+      <mat-cell *matCellDef="let borrow">
+        <button mat-icon-button color="warn" (click)="deleteBorrow(borrow)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </mat-cell>
+    </ng-container>
+
+    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+    <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+  </mat-table>
+
+  <mat-paginator
+    [pageSizeOptions]="[5, 10, 20]"
+    showFirstLastButtons
+  ></mat-paginator>
+</div>

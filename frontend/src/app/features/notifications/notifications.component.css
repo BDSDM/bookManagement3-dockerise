@@ -1,0 +1,90 @@
+.notifications-container {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 320px;
+  max-height: 450px;
+  overflow-y: auto;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 16px;
+  font-family: "Segoe UI", sans-serif;
+  z-index: 1000;
+}
+
+.notifications-container h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.3rem;
+  text-align: center;
+  color: #333;
+}
+
+.notifications-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notifications-container li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 8px;
+  border-bottom: 1px solid #eee;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.notifications-container li.unread {
+  font-weight: 600;
+  background-color: #e3f2fd;
+}
+
+.notifications-container li:hover {
+  background-color: #dbeafe;
+  transform: translateX(3px);
+}
+
+.remove-btn {
+  background: transparent;
+  border: none;
+  color: #ff4d4f;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.remove-btn:hover {
+  color: #ff0000;
+}
+
+.notifications-container p {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+}
+
+.notifications-container button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #1976d2;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.notifications-container button:disabled {
+  background-color: #90caf9;
+  cursor: not-allowed;
+}
+
+.notifications-container button:hover:not(:disabled) {
+  background-color: #1565c0;
+}

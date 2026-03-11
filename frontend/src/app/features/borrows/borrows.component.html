@@ -1,0 +1,89 @@
+<div class="borrows-container">
+  <h2>Mes Emprunts</h2>
+
+  <mat-table
+    [dataSource]="dataSource"
+    class="mat-elevation-z8"
+    *ngIf="borrows.length > 0"
+  >
+    <!-- Borrow Date -->
+    <ng-container matColumnDef="borrowDate">
+      <mat-header-cell *matHeaderCellDef> Date d'emprunt </mat-header-cell>
+
+      <mat-cell *matCellDef="let borrow">
+        {{ borrow.borrowDate | date: "dd/MM/yyyy" }}
+      </mat-cell>
+    </ng-container>
+    <!-- Return Date -->
+    <ng-container matColumnDef="returnDate">
+      <mat-header-cell *matHeaderCellDef> Date de retour </mat-header-cell>
+
+      <mat-cell *matCellDef="let borrow">
+        {{ borrow.returnDate ? (borrow.returnDate | date: "dd/MM/yyyy") : "-" }}
+      </mat-cell>
+    </ng-container>
+    <!-- Status -->
+    <ng-container matColumnDef="status">
+      <mat-header-cell *matHeaderCellDef> Statut </mat-header-cell>
+      <mat-cell *matCellDef="let borrow"> {{ borrow.status }} </mat-cell>
+    </ng-container>
+
+    <!-- Book ID -->
+    <!-- Book Title -->
+    <ng-container matColumnDef="bookId">
+      <mat-header-cell *matHeaderCellDef> Livre </mat-header-cell>
+      <mat-cell *matCellDef="let borrow">
+        {{ borrow.bookTitle }}
+      </mat-cell>
+    </ng-container>
+
+    <!-- Actions -->
+    <ng-container matColumnDef="actions">
+      <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
+      <mat-cell *matCellDef="let borrow">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="openReturnDialog(borrow)"
+          [disabled]="borrow.status === 'retourné'"
+        >
+          Restituer
+        </button>
+      </mat-cell>
+    </ng-container>
+
+    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+    <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+  </mat-table>
+
+  <mat-paginator
+    [pageSizeOptions]="[5, 10, 20]"
+    showFirstLastButtons
+  ></mat-paginator>
+</div>
+
+<!-- Dialog pour saisir la date de restitution -->
+<ng-template #returnDialog>
+  <h2 mat-dialog-title>Restituer l'emprunt</h2>
+  <mat-dialog-content>
+    <form [formGroup]="returnForm">
+      <mat-form-field appearance="fill">
+        <mat-label>Date de restitution</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="returnDate" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="dialogRef.close()">Annuler</button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="confirmReturn()"
+      [disabled]="returnForm.invalid"
+    >
+      Restituer
+    </button>
+  </mat-dialog-actions>
+</ng-template>

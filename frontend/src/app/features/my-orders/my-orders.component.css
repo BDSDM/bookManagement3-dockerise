@@ -1,0 +1,127 @@
+/* ===== TITRE ===== */
+h2 {
+  text-align: center;
+  margin: 20px 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* ===== BOUTONS ===== */
+.orders-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.borrow-date-field {
+  width: 220px;
+}
+
+/* ===== MESSAGE "Aucun livre" ===== */
+div p {
+  text-align: center;
+  font-size: 1rem;
+  color: #7f8c8d;
+}
+
+/* ===== GRID ===== */
+mat-grid-list {
+  width: 100%;
+}
+
+/* Forcer les tiles à occuper la même hauteur et largeur */
+mat-grid-tile {
+  padding: 0 !important; /* Supprime le padding interne qui casse la mise en page */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* ===== CARD ===== */
+.book-card {
+  width: 180px; /* Largeur fixe */
+  height: 260px; /* Hauteur fixe */
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+
+.book-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== IMAGE ===== */
+.book-card img {
+  height: 120px; /* Zone image uniforme */
+  width: 100%;
+  object-fit: cover; /* Remplit sans déformation */
+  display: block;
+  border-bottom: 1px solid #eee; /* Séparation subtile */
+}
+
+/* ===== CONTENU ===== */
+mat-card-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 8px;
+}
+
+/* TITRE */
+.book-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #34495e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* AUTEUR */
+.author {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  line-height: 1.2;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+  mat-grid-list {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .book-card {
+    width: 150px;
+    height: 220px;
+  }
+  .book-card img {
+    height: 100px;
+  }
+}
+
+@media (max-width: 600px) {
+  mat-grid-list {
+    grid-template-columns: repeat(1, 1fr) !important;
+  }
+  .book-card {
+    width: 100%;
+    max-width: 200px;
+    height: 220px;
+  }
+  .book-card img {
+    height: 100px;
+  }
+}
