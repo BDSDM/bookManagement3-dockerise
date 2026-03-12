@@ -70,7 +70,7 @@ Cette commande :
 ✔️ Lance automatiquement l’application
 
 ```cmd
-(for %P in (3306 8080 4200) do @for /f "tokens=1" %I in ('docker ps --format "{{.ID}} {{.Ports}}" ^| findstr ":%P"') do docker rm -f %I) & git clone https://github.com/BDSDM/bookManagement3-dockerise.git && cd bookManagement3-dockerise && docker compose --env-file app.env up -d
+(for %P in (3306 8080 4200) do @for /f "tokens=1" %I in ('docker ps --format "{{.ID}} {{.Ports}}" ^| findstr ":%P"') do docker rm -f %I) & git clone https://github.com/BDSDM/bookManagement3-dockerise.git && cd bookManagement3-dockerise && docker compose --env-file app.env up -d --pull always
 ```
 
 🐧 Sous Linux / macOS (bash / zsh)
