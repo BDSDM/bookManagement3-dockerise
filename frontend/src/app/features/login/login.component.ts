@@ -57,8 +57,7 @@ export class LoginComponent implements OnInit {
       next: (response) => {
         // Sauvegarde des tokens
         this.authService.saveToken(response.token, response.refreshToken);
-        this.websocketService.disconnect();
-        this.websocketService.connect(response.token);
+
         this.dialogRef.close();
         this.router.navigate(['/thebooks']);
         const userEmail = this.authService.getUserEmail();

@@ -15,21 +15,21 @@ export class AuthService {
 
   // ✅ Suivi réactif de l’état de connexion
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(
-    this.hasValidToken()
+    this.hasValidToken(),
   );
   isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
   constructor(
     private http: HttpClient,
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
   ) {}
 
   /** 🔹 Authentifie l’utilisateur */
   login(email: string, password: string) {
     return this.http.post<{ token: string; refreshToken: string }>(
       `${this.apiUrl}/login`,
-      { email, password }
+      { email, password },
     );
   }
 
@@ -49,7 +49,7 @@ export class AuthService {
 
   /** 🔹 Récupère le token JWT */
   getToken() {
-    return localStorage.getItem('token');
+    return localStorage.getItem('token') ?? undefined;
   }
 
   /** 🔹 Vérifie si l’utilisateur est connecté */
@@ -128,13 +128,42 @@ export class AuthService {
     try {
       const payloadBase64 = token.split('.')[1];
       const payloadJson = atob(
-        payloadBase64.replace(/-/g, '+').replace(/_/g, '/')
+        payloadBase64.replace(/-/g, '+').replace(/_/g, '/'),
       );
       const payload = JSON.parse(payloadJson);
       return payload.id || payload.userId || 0;
     } catch (error) {
       console.error('Erreur lors du décodage du token JWT', error);
       return 0;
+    }
+  }
+  /** 🔹 Vérifie si le token JWT est expiré */
+
+  isTokenExpired(token?: string): boolean {
+    token = token || this.getToken();
+
+    if (!token) return true;
+
+    try {
+      const payloadBase64 = token.split('.')[1];
+
+      const payloadJson = atob(
+        payloadBase64.replace(/-/g, '+').replace(/_/g, '/'),
+      );
+
+      const payload = JSON.parse(payloadJson);
+
+      if (!payload.exp) return true; // pas de date d'expiration => considérer comme expiré
+
+      const expiryTime = payload.exp * 1000; // JWT exp est en secondes, JS Date en ms
+
+      const currentTime = Date.now();
+
+      return currentTime >= expiryTime;
+    } catch (error) {
+      console.error('Erreur lors du décodage du token JWT', error);
+
+      return true; // en cas d'erreur, considérer le token comme expiré
     }
   }
 
