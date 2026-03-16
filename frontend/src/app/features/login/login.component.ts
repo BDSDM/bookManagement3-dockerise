@@ -10,6 +10,7 @@ import { RegisterComponent } from '../register/register.component';
 import { RequestResetPasswordComponent } from '../request-reset-password/request-reset-password.component';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { User } from 'src/app/core/models/user.model';
+import { WebsocketService } from 'src/app/core/services/websocket.service';
 
 @Component({
   selector: 'app-login',
@@ -29,11 +30,12 @@ export class LoginComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private websocketService: WebsocketService,
     private router: Router,
     private dialog: MatDialog,
     private cdRef: ChangeDetectorRef,
     @Inject(MAT_DIALOG_DATA) public data: { email: string; password: string },
-    private dialogRef: MatDialogRef<LoginComponent>
+    private dialogRef: MatDialogRef<LoginComponent>,
   ) {}
 
   ngOnInit(): void {
@@ -55,6 +57,8 @@ export class LoginComponent implements OnInit {
       next: (response) => {
         // Sauvegarde des tokens
         this.authService.saveToken(response.token, response.refreshToken);
+        this.websocketService.disconnect();
+        this.websocketService.connect(response.token);
         this.dialogRef.close();
         this.router.navigate(['/thebooks']);
         const userEmail = this.authService.getUserEmail();
