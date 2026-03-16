@@ -1,10 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map, Observable } from 'rxjs';
+import { map, Observable, throwError } from 'rxjs';
 import { User } from '../models/user.model';
 import { environment } from 'src/app/environments/environment';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+})
 export class UserService {
   private apiUrl = `${environment.apiUrlUser}/users`;
   private authUrl = `${environment.apiUrlUser}/auth`;
@@ -29,10 +31,10 @@ export class UserService {
 
   refreshAccessToken(): Observable<string> {
     const refreshToken = localStorage.getItem('refreshToken');
-    console.log('refreshtoken ' + refreshToken);
+    console.log('refreshToken:', refreshToken);
 
     if (!refreshToken) {
-      throw new Error('Aucun refresh token trouvé');
+      return throwError(() => new Error('No refresh token found'));
     }
 
     return this.http

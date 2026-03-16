@@ -18,6 +18,7 @@ import { UserService } from './core/services/user.service';
 export class AppComponent implements OnInit {
   title = 'bookManagementFrontend';
   notifications: any[] = [];
+
   private ignoredRoutes: string[] = ['/login', '/logout', '/register', '/'];
 
   constructor(
@@ -44,7 +45,7 @@ export class AppComponent implements OnInit {
 
       const email = this.authService.getUserEmail();
       const role = this.authService.getUserRole();
-      let token = this.authService.getToken(); // string | null
+      const token = this.authService.getToken();
 
       if (!email) {
         console.error('User email is null. Cannot proceed.');
@@ -56,23 +57,27 @@ export class AppComponent implements OnInit {
       this.trackVisitedPages();
       this.loadNotifications();
 
-      // Admin WebSocket logic
       if (role?.toLowerCase() === 'admin' && token) {
         if (this.authService.isTokenExpired(token)) {
-          // Token expired → refresh first
           this.userService.refreshAccessToken().subscribe({
             next: (newToken) => {
               if (!newToken) {
                 this.authService.logout();
                 return;
               }
-              this.authService.saveToken(newToken, ''); // provide refresh token if needed
+
+              const refreshToken = localStorage.getItem('refreshToken') || '';
+
+              this.authService.saveToken(newToken, refreshToken);
+
               this.connectWebSocket(newToken);
             },
-            error: () => this.authService.logout(),
+            error: () => {
+              console.error('Token refresh failed');
+              this.authService.logout();
+            },
           });
         } else {
-          // Token valid → connect WebSocket directly
           this.connectWebSocket(token);
         }
       }
@@ -81,10 +86,13 @@ export class AppComponent implements OnInit {
 
   /** Connect WebSocket and subscribe to notifications */
   private connectWebSocket(token: string): void {
+    this.websocketService.disconnect();
+
     this.websocketService.connect(token);
+
     this.websocketService.getNotifications().subscribe((notification) => {
-      this.notifications.unshift(notification);
       console.log('🔔 New notification:', notification);
+      this.notifications.unshift(notification);
     });
   }
 
@@ -103,7 +111,9 @@ export class AppComponent implements OnInit {
   private loadUserColor(): void {
     this.colorService.getColorServer().subscribe({
       next: (res) => {
-        if (res?.color) this.colorService.applyColorToBody(res.color, true);
+        if (res?.color) {
+          this.colorService.applyColorToBody(res.color, true);
+        }
       },
       error: (err) => console.warn('Error loading user color:', err),
     });
@@ -114,6 +124,7 @@ export class AppComponent implements OnInit {
     this.cookieService.getLastPage(email).subscribe({
       next: (res) => {
         const lastPage = res?.lastPage || '/';
+
         if (!this.isIgnoredRoute(lastPage) && lastPage !== this.router.url) {
           this.router.navigateByUrl(lastPage);
         }
@@ -129,7 +140,9 @@ export class AppComponent implements OnInit {
       .subscribe((event) => {
         const page = event.urlAfterRedirects;
         const email = this.authService.getUserEmail();
+
         if (!email) return;
+
         if (!this.isIgnoredRoute(page)) {
           this.cookieService.setLastPage(page, email).subscribe();
         }
