@@ -12,7 +12,7 @@ import { Notification } from 'src/app/core/models/notification.model';
 })
 export class NotificationsComponent implements OnInit, OnDestroy {
   notifications: Notification[] = [];
-  private subscription!: Subscription;
+  private subscription?: Subscription;
 
   constructor(
     private notificationService: NotificationService,
@@ -22,67 +22,87 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const email = this.authService.getUserEmail();
-    if (!email) return;
+    const token = this.authService.getToken();
 
-    // Load notifications from backend
-    this.notificationService.getNotifications().subscribe({
+    if (!email || !token) {
+      console.error('Missing email or token');
+      return;
+    }
+
+    // ✅ STEP 1: Subscribe FIRST (single source of truth)
+    this.subscription = this.websocketService
+      .getNotifications()
+      .subscribe((notifications) => {
+        this.notifications = notifications;
+      });
+
+    // ✅ STEP 2: Load DB notifications and push into WebSocket state
+    this.notificationService.getNotifications(email).subscribe({
       next: (res) => {
-        this.notifications = res;
+        console.log('📥 Loaded from DB:', res);
+
+        this.websocketService.clearNotifications();
+
+        res.forEach((n) => {
+          this.websocketService.addNotification(n);
+        });
       },
       error: (err) => console.warn('Failed to load notifications:', err),
     });
 
-    // Subscribe to WebSocket real-time notifications
-    this.subscription = this.websocketService.notifications$.subscribe(
-      (notifications: Notification[]) => {
-        this.notifications = notifications;
-      },
-    );
-
-    // Connect WebSocket
-    this.websocketService.connect();
+    // ✅ STEP 3: Connect WebSocket (live updates)
+    this.websocketService.connect(token);
   }
 
   ngOnDestroy(): void {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
-    }
+    this.subscription?.unsubscribe();
     this.websocketService.disconnect();
   }
 
-  /** Clear all notifications locally AND in backend */
+  /**
+   * ✅ Clear all notifications (DB + UI)
+   */
   clearNotifications(): void {
-    this.notificationService.deleteNotifications().subscribe({
+    const email = this.authService.getUserEmail();
+    if (!email) return;
+
+    this.notificationService.deleteAllNotifications(email).subscribe({
       next: () => {
-        // Only clear UI after backend confirmation
-        this.notifications = [];
         this.websocketService.clearNotifications();
       },
       error: (err) => console.warn('Failed to clear notifications:', err),
     });
   }
 
-  /** Remove a single notification */
+  /**
+   * ✅ Remove a single notification
+   */
   removeNotification(notification: Notification): void {
     if (!notification.id) {
-      // If notification has no backend ID → remove only locally
-      this.notifications = this.notifications.filter((n) => n !== notification);
-      this.websocketService.removeNotification(notification.id || 0);
+      // Local only
+      this.websocketService.removeNotification(0);
       return;
     }
 
-    // Remove from UI
-    this.notifications = this.notifications.filter(
-      (n) => n.id !== notification.id,
-    );
-
-    // Remove from WebSocket state
+    // Remove from UI immediately
     this.websocketService.removeNotification(notification.id);
 
-    // Mark as read in backend
+    // Delete from backend
+    this.notificationService.deleteNotification(notification.id).subscribe({
+      next: () => {},
+      error: (err) => console.warn('Failed to delete notification:', err),
+    });
+  }
+
+  /**
+   * ✅ Mark as read (optional feature)
+   */
+  markAsRead(notification: Notification): void {
+    if (!notification.id) return;
+
     this.notificationService.markAsRead(notification.id).subscribe({
       next: () => {},
-      error: (err) => console.warn('Failed to mark notification as read:', err),
+      error: (err) => console.warn('Failed to mark as read:', err),
     });
   }
 }

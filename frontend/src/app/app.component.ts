@@ -6,7 +6,10 @@ import { CheckActivityService } from './core/services/check-activity.service';
 import { ColorService } from './core/services/color.service';
 import { CookieService } from './core/services/cookie.service';
 import { AuthService } from './core/services/auth.service';
-import { WebsocketService } from './core/services/websocket.service';
+import {
+  WebsocketService,
+  Notification,
+} from './core/services/websocket.service';
 import { NotificationService } from './core/services/notification.service';
 import { UserService } from './core/services/user.service';
 
@@ -17,7 +20,7 @@ import { UserService } from './core/services/user.service';
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'bookManagementFrontend';
-  notifications: any[] = [];
+  notifications: Notification[] = [];
 
   private ignoredRoutes: string[] = ['/login', '/logout', '/register', '/'];
 
@@ -40,6 +43,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.authSubscription = this.authService.isAuthenticated$.subscribe(
       (isAuthenticated) => {
+        // 🔴 USER LOGGED OUT
         if (!isAuthenticated) {
           this.colorService.applyColorToBody('#ffffff', true);
           this.websocketService.disconnect();
@@ -49,6 +53,7 @@ export class AppComponent implements OnInit, OnDestroy {
           return;
         }
 
+        // 🟢 USER LOGGED IN
         const email = this.authService.getUserEmail();
         const role = this.authService.getUserRole();
         const token = this.authService.getToken();
@@ -61,8 +66,11 @@ export class AppComponent implements OnInit, OnDestroy {
         this.loadUserColor();
         this.loadLastVisitedPage(email);
         this.trackVisitedPages();
-        this.loadNotifications();
 
+        // 🔥 STEP 1: LOAD FROM DATABASE FIRST
+        this.loadNotifications(email);
+
+        // 🔥 STEP 2: CONNECT WEBSOCKET FOR LIVE UPDATES
         if (role?.toLowerCase() === 'admin' && token) {
           if (this.authService.isTokenExpired(token)) {
             this.userService.refreshAccessToken().subscribe({
@@ -91,31 +99,45 @@ export class AppComponent implements OnInit, OnDestroy {
     );
   }
 
-  /** Connect WebSocket and subscribe safely */
+  /**
+   * ✅ Connect WebSocket and subscribe
+   */
   private connectWebSocket(token: string): void {
     this.websocketService.connect(token);
 
-    // 🔥 IMPORTANT: unsubscribe previous subscription
+    // Prevent duplicate subscriptions
     this.wsSubscription?.unsubscribe();
 
     this.wsSubscription = this.websocketService
       .getNotifications()
       .subscribe((notifications) => {
-        console.log('🔔 Notifications updated:', notifications);
+        console.log('🔔 Notifications updated (WS + DB):', notifications);
         this.notifications = notifications;
       });
   }
 
-  /** Load stored notifications from backend */
-  private loadNotifications(): void {
-    this.notificationService.getNotifications().subscribe({
+  /**
+   * ✅ Load notifications from database
+   */
+  private loadNotifications(email: string): void {
+    this.notificationService.getNotifications(email).subscribe({
       next: (data) => {
-        this.notifications = data || [];
+        console.log('📥 Notifications loaded from DB:', data);
+
+        // 🔥 IMPORTANT: push DB data into WebSocket state
+        this.websocketService.clearNotifications();
+
+        data.forEach((n) => {
+          this.websocketService.addNotification(n);
+        });
       },
       error: (err) => console.error('Error loading notifications:', err),
     });
   }
 
+  /**
+   * Load user color
+   */
   private loadUserColor(): void {
     this.colorService.getColorServer().subscribe({
       next: (res) => {
@@ -126,6 +148,9 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Restore last visited page
+   */
   private loadLastVisitedPage(email: string): void {
     this.cookieService.getLastPage(email).subscribe({
       next: (res) => {
@@ -138,6 +163,9 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Track visited pages
+   */
   private trackVisitedPages(): void {
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
@@ -153,11 +181,17 @@ export class AppComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Ignore routes
+   */
   private isIgnoredRoute(route: string): boolean {
     const cleanRoute = route.split('?')[0].split('#')[0];
     return this.ignoredRoutes.includes(cleanRoute);
   }
 
+  /**
+   * Cleanup
+   */
   ngOnDestroy(): void {
     this.wsSubscription?.unsubscribe();
     this.authSubscription?.unsubscribe();

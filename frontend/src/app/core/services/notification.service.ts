@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { Notification } from '../models/notification.model';
 
 @Injectable({
@@ -11,22 +11,31 @@ export class NotificationService {
 
   constructor(private http: HttpClient) {}
 
-  getNotifications(): Observable<Notification[]> {
-    const email = localStorage.getItem('userEmail');
-    if (!email) return of([]);
+  /**
+   * ✅ Get notifications for a user
+   */
+  getNotifications(email: string): Observable<Notification[]> {
     return this.http.get<Notification[]>(`${this.baseUrl}/user/${email}`);
   }
 
-  deleteNotifications(): Observable<void> {
-    const email = localStorage.getItem('userEmail');
-    if (!email) return of(void 0);
+  /**
+   * ✅ Delete all notifications for a user
+   */
+  deleteAllNotifications(email: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/user/${email}`);
   }
 
-  markAsRead(notificationId: number): Observable<Notification> {
-    return this.http.patch<Notification>(
-      `${this.baseUrl}/${notificationId}/read`,
-      {},
-    );
+  /**
+   * ✅ Delete a single notification
+   */
+  deleteNotification(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  /**
+   * ⚠️ Requires backend endpoint
+   */
+  markAsRead(notificationId: number): Observable<void> {
+    return this.http.patch<void>(`${this.baseUrl}/${notificationId}/read`, {});
   }
 }
