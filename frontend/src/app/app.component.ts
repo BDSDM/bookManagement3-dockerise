@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
 
 import { CheckActivityService } from './core/services/check-activity.service';
 import { ColorService } from './core/services/color.service';
@@ -15,11 +15,14 @@ import { UserService } from './core/services/user.service';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'bookManagementFrontend';
   notifications: any[] = [];
 
   private ignoredRoutes: string[] = ['/login', '/logout', '/register', '/'];
+
+  private wsSubscription?: Subscription;
+  private authSubscription?: Subscription;
 
   constructor(
     private checkActivityService: CheckActivityService,
@@ -35,65 +38,72 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.checkActivityService.startChecking();
 
-    this.authService.isAuthenticated$.subscribe((isAuthenticated) => {
-      if (!isAuthenticated) {
-        this.colorService.applyColorToBody('#ffffff', true);
-        this.websocketService.disconnect();
-        this.notifications = [];
-        return;
-      }
+    this.authSubscription = this.authService.isAuthenticated$.subscribe(
+      (isAuthenticated) => {
+        if (!isAuthenticated) {
+          this.colorService.applyColorToBody('#ffffff', true);
+          this.websocketService.disconnect();
+          this.notifications = [];
 
-      const email = this.authService.getUserEmail();
-      const role = this.authService.getUserRole();
-      const token = this.authService.getToken();
-
-      if (!email) {
-        console.error('User email is null. Cannot proceed.');
-        return;
-      }
-
-      this.loadUserColor();
-      this.loadLastVisitedPage(email);
-      this.trackVisitedPages();
-      this.loadNotifications();
-
-      if (role?.toLowerCase() === 'admin' && token) {
-        if (this.authService.isTokenExpired(token)) {
-          this.userService.refreshAccessToken().subscribe({
-            next: (newToken) => {
-              if (!newToken) {
-                this.authService.logout();
-                return;
-              }
-
-              const refreshToken = localStorage.getItem('refreshToken') || '';
-
-              this.authService.saveToken(newToken, refreshToken);
-
-              this.connectWebSocket(newToken);
-            },
-            error: () => {
-              console.error('Token refresh failed');
-              this.authService.logout();
-            },
-          });
-        } else {
-          this.connectWebSocket(token);
+          this.wsSubscription?.unsubscribe();
+          return;
         }
-      }
-    });
+
+        const email = this.authService.getUserEmail();
+        const role = this.authService.getUserRole();
+        const token = this.authService.getToken();
+
+        if (!email) {
+          console.error('User email is null. Cannot proceed.');
+          return;
+        }
+
+        this.loadUserColor();
+        this.loadLastVisitedPage(email);
+        this.trackVisitedPages();
+        this.loadNotifications();
+
+        if (role?.toLowerCase() === 'admin' && token) {
+          if (this.authService.isTokenExpired(token)) {
+            this.userService.refreshAccessToken().subscribe({
+              next: (newToken) => {
+                if (!newToken) {
+                  this.authService.logout();
+                  return;
+                }
+
+                const refreshToken = localStorage.getItem('refreshToken') || '';
+
+                this.authService.saveToken(newToken, refreshToken);
+
+                this.connectWebSocket(newToken);
+              },
+              error: () => {
+                console.error('Token refresh failed');
+                this.authService.logout();
+              },
+            });
+          } else {
+            this.connectWebSocket(token);
+          }
+        }
+      },
+    );
   }
 
-  /** Connect WebSocket and subscribe to notifications */
+  /** Connect WebSocket and subscribe safely */
   private connectWebSocket(token: string): void {
-    this.websocketService.disconnect();
-
     this.websocketService.connect(token);
 
-    this.websocketService.getNotifications().subscribe((notification) => {
-      console.log('🔔 New notification:', notification);
-      this.notifications.unshift(notification);
-    });
+    // 🔥 IMPORTANT: unsubscribe previous subscription
+    this.wsSubscription?.unsubscribe();
+
+    this.wsSubscription = this.websocketService
+      .getNotifications()
+      .subscribe((notifications) => {
+        console.log('🔔 Notifications updated:', notifications);
+        this.notifications = notifications;
+      });
   }
 
   /** Load stored notifications from backend */
@@ -101,13 +111,11 @@ export class AppComponent implements OnInit {
     this.notificationService.getNotifications().subscribe({
       next: (data) => {
         this.notifications = data || [];
-        console.log('📥 Notifications loaded from DB:', this.notifications);
       },
       error: (err) => console.error('Error loading notifications:', err),
     });
   }
 
-  /** Load user color preference */
   private loadUserColor(): void {
     this.colorService.getColorServer().subscribe({
       next: (res) => {
@@ -115,11 +123,9 @@ export class AppComponent implements OnInit {
           this.colorService.applyColorToBody(res.color, true);
         }
       },
-      error: (err) => console.warn('Error loading user color:', err),
     });
   }
 
-  /** Restore last visited page */
   private loadLastVisitedPage(email: string): void {
     this.cookieService.getLastPage(email).subscribe({
       next: (res) => {
@@ -129,11 +135,9 @@ export class AppComponent implements OnInit {
           this.router.navigateByUrl(lastPage);
         }
       },
-      error: () => this.router.navigateByUrl('/'),
     });
   }
 
-  /** Track visited pages */
   private trackVisitedPages(): void {
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
@@ -149,9 +153,13 @@ export class AppComponent implements OnInit {
       });
   }
 
-  /** Ignore certain routes */
   private isIgnoredRoute(route: string): boolean {
     const cleanRoute = route.split('?')[0].split('#')[0];
     return this.ignoredRoutes.includes(cleanRoute);
+  }
+
+  ngOnDestroy(): void {
+    this.wsSubscription?.unsubscribe();
+    this.authSubscription?.unsubscribe();
   }
 }

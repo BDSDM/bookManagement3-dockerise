@@ -1,144 +1,110 @@
 import { Injectable } from '@angular/core';
-
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
-
 import * as SockJS from 'sockjs-client';
-
 import { BehaviorSubject } from 'rxjs';
 
 // Interface for notifications
-
 export interface Notification {
-  id?: number; // Optional, useful if backend stores notifications
-
-  message: string; // The main notification text
-
-  timestamp?: string; // Optional timestamp
+  id?: number;
+  message: string;
+  timestamp?: string;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class WebsocketService {
-  private client!: Client; // STOMP client instance
-
-  private subscription: StompSubscription | null = null; // Current subscription
-
-  // Observable notifications for components
+  private client: Client | null = null;
+  private subscription: StompSubscription | null = null;
 
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
-
   notifications$ = this.notificationsSubject.asObservable();
 
   constructor() {}
 
   /**
-
    * Connect to WebSocket server
-
-   * @param token JWT token for authentication
-
    */
-
   connect(token?: string): void {
-    // Use token from localStorage if not passed
+    // 🔥 ALWAYS disconnect before reconnecting (avoid duplicates)
+    this.disconnect();
 
+    // Get token if not provided
     if (!token) {
       token = localStorage.getItem('token') || '';
-
       if (!token) {
-        console.error('Token not found, cannot connect WebSocket');
-
+        console.error('❌ Token not found, cannot connect WebSocket');
         return;
       }
     }
 
-    // Create a new STOMP client
-
+    // Create STOMP client
     this.client = new Client({
-      // SockJS factory for fallback support
-
       webSocketFactory: () =>
         new SockJS(`http://localhost:8080/ws?token=${token}`),
 
-      // Auto-reconnect every 5 seconds
-
       reconnectDelay: 5000,
 
-      // Debug logs
-
       debug: (str) => console.log('[STOMP DEBUG]', str),
-
-      // When connection is established
 
       onConnect: () => {
         console.log('✅ WebSocket connected');
 
-        // Subscribe to user's private notification queue
-
-        this.subscription = this.client.subscribe(
+        // Subscribe safely
+        this.subscription = this.client!.subscribe(
           '/user/queue/notifications',
-
           (message: IMessage) => {
-            try {
-              const notification: Notification = JSON.parse(message.body);
-
-              console.log('🔔 Notification received:', notification);
-
-              // Prepend to current notifications list
-
-              const current = this.notificationsSubject.getValue();
-
-              this.notificationsSubject.next([notification, ...current]);
-            } catch (err) {
-              console.error('Failed to parse notification', err);
-            }
+            this.handleIncomingNotification(message);
           },
         );
       },
-
-      // Handle STOMP errors
 
       onStompError: (frame) => {
         console.error('❌ STOMP Error:', frame.headers['message'], frame.body);
       },
 
-      // Optional: handle WebSocket close
-
       onWebSocketClose: (evt: CloseEvent) => {
         console.warn('⚠️ WebSocket closed', evt);
       },
-
-      // Optional: handle WebSocket error
 
       onWebSocketError: (evt: Event) => {
         console.error('⚠️ WebSocket error', evt);
       },
     });
 
-    // Activate the STOMP client
-
     this.client.activate();
   }
 
   /**
-
-   * Disconnect from WebSocket
-
+   * Handle incoming notifications (clean separation of logic)
    */
+  private handleIncomingNotification(message: IMessage): void {
+    try {
+      const notification: Notification = JSON.parse(message.body);
 
+      console.log('🔔 Notification received:', notification);
+
+      const current = this.notificationsSubject.getValue();
+
+      this.notificationsSubject.next([notification, ...current]);
+    } catch (err) {
+      console.error('❌ Failed to parse notification', err);
+    }
+  }
+
+  /**
+   * Disconnect WebSocket
+   */
   disconnect(): void {
     if (this.subscription) {
       this.subscription.unsubscribe();
-
       this.subscription = null;
     }
 
-    if (this.client?.active) {
+    if (this.client && this.client.active) {
       this.client.deactivate();
+      this.client = null;
     }
-
-    // Clear notifications when user logs out
 
     this.notificationsSubject.next([]);
 
@@ -146,47 +112,32 @@ export class WebsocketService {
   }
 
   /**
-
-   * Manually add a notification
-
+   * Add notification manually
    */
-
-  addNotification(notification: Notification) {
+  addNotification(notification: Notification): void {
     const current = this.notificationsSubject.getValue();
-
     this.notificationsSubject.next([notification, ...current]);
   }
 
   /**
-
-   * Remove a notification by its ID
-
+   * Remove notification by ID
    */
-
-  removeNotification(notificationId: number) {
+  removeNotification(notificationId: number): void {
     const current = this.notificationsSubject.getValue();
-
     const updated = current.filter((n) => n.id !== notificationId);
-
     this.notificationsSubject.next(updated);
   }
 
   /**
-
    * Clear all notifications
-
    */
-
-  clearNotifications() {
+  clearNotifications(): void {
     this.notificationsSubject.next([]);
   }
 
   /**
-
    * Get notifications as Observable
-
    */
-
   getNotifications() {
     return this.notifications$;
   }
